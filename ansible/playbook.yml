@@ -32,7 +32,6 @@
     - name: Configure EC2 instance
       become: yes
       become_user: ec2-user
-      hosts: "{{ item.public_ip }}"
       tasks:
         - name: Install Apache (or Nginx)
           yum:
@@ -63,4 +62,3 @@
           when: ansible_pkg_mgr == "yum" and item == "httpd"
           with_items:
             - httpd
-

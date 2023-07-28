@@ -1,64 +1,113 @@
 ---
-- name: Provision and Configure EC2 Instance
+- name: Deploy Web Server and Host Static Webpage on AWS
   hosts: localhost
-  gather_facts: yes
+  gather_facts: false
+
   vars:
-    region: "us-east-1"
+    region: "eastus"
     instance_type: "t2.micro"
-    ami_id: "ami-0c55b159cbfafe1f0"  # Amazon Linux 2 AMI ID for us-east-1
-    key_pair: "key-pair"  # Replace with your EC2 key pair name
-    security_group: "web-server-sg"
+    key_name: "key-pair"
+    security_group: "web-server-nsg"
+    ami_id: "ami-0c55b159cbfafe1f0"
+    github_repo: "https://github.com/your_username/your_repository.git"
+    website_bucket_name: "YOUR_WEBSITE_BUCKET_NAME"
+
   tasks:
-    - name: Create EC2 instance
+    - name: Provision an EC2 instance
       ec2:
-        region: "{{ region }}"
+        key_name: "{{ key_name }}"
+        group: "{{ security_group }}"
         instance_type: "{{ instance_type }}"
-        image_id: "{{ ami_id }}"
-        key_name: "{{ key_pair }}"
-        group_id: "{{ security_group }}"
+        image: "{{ ami_id }}"
+        region: "{{ region }}"
+        wait: yes
         count: 1
         instance_tags:
           Name: WebServer
       register: ec2_instance
 
-    - name: Wait for SSH to be available
+    - name: Add the new instance to the host group
+      add_host:
+        name: "{{ item.public_ip }}"
+        groups: webserver
+      with_items: "{{ ec2_instance.instances }}"
+
+    - name: Wait for SSH to become available
       wait_for:
         host: "{{ item.public_ip }}"
         port: 22
-        delay: 60
-        timeout: 320
+        timeout: 300
+        state: started
       with_items: "{{ ec2_instance.instances }}"
 
-    - name: Configure EC2 instance
+    - name: Update the system packages
       become: yes
-      become_user: ec2-user
+      hosts: webserver
+      gather_facts: true
       tasks:
-        - name: Install Apache (or Nginx)
-          yum:
-            name: "{{ item }}"
-            state: present
-          with_items:
-            - httpd  # For Apache
-            - nginx  # For Nginx
+        - name: Update system packages
+          package:
+            name: "*"
+            state: latest
 
-        - name: Start and enable Apache (or Nginx)
+    - name: Install Apache web server
+      become: yes
+      hosts: webserver
+      gather_facts: true
+      tasks:
+        - name: Install Apache2
+          package:
+            name: apache2
+            state: present
+
+    - name: Clone GitHub repository
+      hosts: webserver
+      gather_facts: false
+      tasks:
+        - name: Install git
+          apt:
+            name: git
+            state: present
+            update_cache: yes
+          become: yes
+
+        - name: Clone the GitHub repository
+          git:
+            repo: "{{ github_repo }}"
+            dest: "/var/www/html"
+          become: yes
+
+    - name: Ensure Apache service is running and enabled
+      become: yes
+      hosts: webserver
+      gather_facts: true
+      tasks:
+        - name: Start Apache2 service
           service:
-            name: "{{ item }}"
+            name: apache2
             state: started
             enabled: yes
-          with_items:
-            - httpd  # For Apache
-            - nginx  # For Nginx
 
-        - name: Copy index.html to web server
-          copy:
-            src: "templates/index.html"
-            dest: "/var/www/html/index.html"
+    - name: Create S3 bucket for the static website
+      hosts: localhost
+      gather_facts: false
+      tasks:
+        - name: Create S3 bucket
+          aws_s3:
+            bucket: "{{ website_bucket_name }}"
+            mode: create
+            region: "{{ region }}"
+            state: present
 
-        - name: Set SELinux to permissive mode (if using Apache)
-          selinux:
-            policy: targeted
-            state: permissive
-          when: ansible_pkg_mgr == "yum" and item == "httpd"
+    - name: Upload website files to S3 bucket
+      hosts: localhost
+      gather_facts: false
+      tasks:
+        - name: Upload website files to S3 bucket
+          aws_s3:
+            bucket: "{{ website_bucket_name }}"
+            object: "{{ item }}"
+            src: "/var/www/html/{{ item }}"
+            mode: put
           with_items:
-            - httpd
+            - index.html

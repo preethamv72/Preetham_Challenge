@@ -1,44 +1,31 @@
-# Preetham_Challenge
+# PROVISIONING A WEB SERVER AND DEPLOYING A STATIC WEB APP USING ANSIBLE #
 
-Static web application infra deployment and hosting via Ansible:
+**Prerequisites**:
+Before starting with the tutorial, make sure you have a Linux machine or virtual environment set up with the Ansible and AWS CLI installed. To begin with, create an AWS user with programmatic access and say the key or use AWS CLI i.e 
 
-Steps to deploy a static application:
+```aws configure```
 
-1. **Prerequisites**: A local machine with the following packages installed:
-- Python
-- Pip
-- Git
-- AWS Cli - Refer to https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
-  
-2. **Installing Ansible**: Use the following command to install Ansible on your local machine
-pip install ansible
+This will give the API access key ID and secret key for the programmatic access.
 
-3. Now clone the existing repo:
-```git clone https://github.com/preethamv72/Preetham_Challenge.git```
+Run the following command
 
-4. Use the following commands to run the play-book:
+```ansible-playbook environment-details.yml```
 
-```cd Preetham_Challenge```
+Running this will populate the env_vars.yml file with the necessary values like region, VPC_Subnet, SEC_GROUP_NAME
 
-```ansible-playbook -i localhost, ansible/playbook.yml```
-
-# File Structure
-
-```
-Preetham_Challenge/
-|-- ansible/
-|   |-- playbook.yml    # Ansible playbook to configure the EC2 instance and web server
-|   |-- roles/
-|       |-- webserver/
-|           |-- tasks/
-|               |-- main.yml    # Tasks to install and configure the web server
-|           |-- templates/
-|               |-- index.html   # Html template for the "Hello World" page
-|-- tests/
-|   |-- test_hello_world.py   # Automated tests for the web application
-|-- README.md    # Documentation and instructions for the project
-```
+Verify if the information is right.
 
 
- 
+Now run the playbook.yml by using the following command
 
+```ansible-playbook playbook.yml```
+
+This will have multiple plays which will create a Key pair, an EC2 instance,  adds the EC2 instance to an inventory group, installs Apache httpd and runs the static app provided
+
+To test it, use:
+
+```curl <PUBLIC-IP-ADDRESS>/index.html```
+
+If it shows up the "Hello World!" text, then it's a success. 
+
+Thank you

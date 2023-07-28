@@ -1,0 +1,4 @@
+AWS_REGION: us-east-1
+AMI_ID: [] #Will be filled after the playbook run
+DEFAULT_VPC_SUBNET: [] #Will be filled after the playbook run
+SEC_GROUP_NAME: [] #Will be filled after the playbook run

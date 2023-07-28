@@ -9,8 +9,8 @@
     key_name: "key-pair"
     security_group: "web-server-nsg"
     ami_id: "ami-0c55b159cbfafe1f0"
-    github_repo: "https://github.com/your_username/your_repository.git"
-    website_bucket_name: "YOUR_WEBSITE_BUCKET_NAME"
+    github_repo: "https://github.com/preethamv72/Preetham_Challenge.git"
+    website_bucket_name: "preetham_challenge"
 
   tasks:
     - name: Provision an EC2 instance

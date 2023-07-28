@@ -1,0 +1,66 @@
+---
+- name: Provision and Configure EC2 Instance
+  hosts: localhost
+  gather_facts: yes
+  vars:
+    region: "us-east-1"
+    instance_type: "t2.micro"
+    ami_id: "ami-0c55b159cbfafe1f0"  # Amazon Linux 2 AMI ID for us-east-1
+    key_pair: "key-pair"  # Replace with your EC2 key pair name
+    security_group: "web-server-sg"
+  tasks:
+    - name: Create EC2 instance
+      ec2:
+        region: "{{ region }}"
+        instance_type: "{{ instance_type }}"
+        image_id: "{{ ami_id }}"
+        key_name: "{{ key_pair }}"
+        group_id: "{{ security_group }}"
+        count: 1
+        instance_tags:
+          Name: WebServer
+      register: ec2_instance
+
+    - name: Wait for SSH to be available
+      wait_for:
+        host: "{{ item.public_ip }}"
+        port: 22
+        delay: 60
+        timeout: 320
+      with_items: "{{ ec2_instance.instances }}"
+
+    - name: Configure EC2 instance
+      become: yes
+      become_user: ec2-user
+      hosts: "{{ item.public_ip }}"
+      tasks:
+        - name: Install Apache (or Nginx)
+          yum:
+            name: "{{ item }}"
+            state: present
+          with_items:
+            - httpd  # For Apache
+            - nginx  # For Nginx
+
+        - name: Start and enable Apache (or Nginx)
+          service:
+            name: "{{ item }}"
+            state: started
+            enabled: yes
+          with_items:
+            - httpd  # For Apache
+            - nginx  # For Nginx
+
+        - name: Copy index.html to web server
+          copy:
+            src: "templates/index.html"
+            dest: "/var/www/html/index.html"
+
+        - name: Set SELinux to permissive mode (if using Apache)
+          selinux:
+            policy: targeted
+            state: permissive
+          when: ansible_pkg_mgr == "yum" and item == "httpd"
+          with_items:
+            - httpd
+

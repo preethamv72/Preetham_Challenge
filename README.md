@@ -29,3 +29,11 @@ To test it, use:
 If it shows up the "Hello World!" text, then it's a success. 
 
 Thank you
+
+# Python code to detect a credit card number "
+
+Please find the ```credit_card.py``` under Credit_card directory. 
+
+Feel free to run and test it.
+
+Thank you
